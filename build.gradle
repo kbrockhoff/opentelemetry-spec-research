@@ -1,0 +1,14 @@
+plugins {
+    id 'java-library'
+    id 'com.google.protobuf' version '0.8.10'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.guava:guava:28.0-jre'
+
+    testImplementation 'junit:junit:4.12'
+}
