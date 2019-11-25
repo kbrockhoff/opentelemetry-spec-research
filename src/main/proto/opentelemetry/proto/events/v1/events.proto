@@ -34,9 +34,57 @@ message Event {
   // attributes is a collection of attribute key/value pairs on the event.
   repeated opentelemetry.proto.common.v1.AttributeKeyValue attributes = 3;
 
-  // dropped_attributes_count is the number of dropped attributes. If the value is 0,
-  // then no attributes were dropped.
+  // dropped_attributes_count is the number of dropped attributes.
+  // If the value is 0, then no attributes were dropped.
   uint32 dropped_attributes_count = 4;
+}
+
+message ErrorData {
+  // Unique identifier/hash for this particular error instance.
+  // Multiple instrumented libraries may record the same error.
+  // This hash should be used to de-duplicate the data.
+  string hash_id = 1;
+
+  // Unique identifier/hash for the error location and type.
+  // A code bug can trigger an error everytime it is hit. If the issue has
+  // been seen before, this value can be populated in lieu of populating
+  // the exceptions field.
+  string issue_hash_id = 2;
+
+  // Chained exceptions which caused the error or fault.
+  repeated Exception exceptions = 3;
+
+  // Method argument values in use when the error occurred.
+  repeated opentelemetry.proto.common.v1.AttributeKeyValue arguments = 4;
+
+  // Local variable values in use when the error occurred.
+  repeated opentelemetry.proto.common.v1.AttributeKeyValue local_vars = 5;
+
+  //
+  bytes crash_data = 6;
+}
+
+// The full details of one exception
+message Exception {
+  // Unique identifier for the exception.
+  string id = 1;
+
+  // Vendor-defined error code for the exception such as SQLState
+  string error_code = 2;
+
+  // The exception message.
+  string messsage = 3;
+
+  // The exception class or type.
+  string type = 4;
+  // Exception ID of the exception's parent, that is, the exception that
+  // caused this exception.
+
+  // Unique identifier for triggering exception.
+  string cause = 5;
+
+  // The stack.
+  StackTrace stack = 6;
 }
 
 // The full details of a call stack.
@@ -46,21 +94,27 @@ message StackTrace {
     // The fully-qualified name that uniquely identifies the function or
     // method that is active in this frame.
     string function_name = 1;
+
     // The name of the source file where the function call appears.
     string file_name = 3;
+
     // The line number in `file_name` where the function call appears.
     int64 line_number = 4;
+
     // The column number where the function call appears, if available.
     // This is important in JavaScript because of its anonymous functions.
     int64 column_number = 5;
+
     // The binary module from where the code was loaded.
     string load_module = 6;
+
     // The version of the deployed source code.
     string source_version = 7;
   }
 
   // Stack frames in this call stack.
   repeated StackFrame frames = 1;
+
   // The number of stack frames that were dropped because there
   // were too many stack frames.
   // If this value is 0, then no stack frames were dropped.
@@ -76,5 +130,5 @@ message StackTrace {
   // Subsequent spans within the same request can refer
   // to that stack trace by setting only `stack_trace_hash_id`.
   //
-  uint64 stack_trace_hash_id = 3;
+  string stack_trace_hash_id = 3;
 }

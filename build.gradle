@@ -15,8 +15,24 @@ dependencies {
     testImplementation 'junit:junit:4.12'
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
 protobuf {
   protoc {
     artifact = 'com.google.protobuf:protoc:3.10.0'
   }
+}
+
+test {
+    systemProperty("java.util.logging.config.file", "${projectDir}/src/test/resources/test-logging.properties")
+    testLogging {
+        exceptionFormat = 'full'
+        showExceptions true
+        showCauses true
+        showStackTraces true
+    }
+    maxHeapSize = '1500m'
 }

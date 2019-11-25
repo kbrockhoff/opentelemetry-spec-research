@@ -16,6 +16,8 @@ syntax = "proto3";
 
 package opentelemetry.proto.common.v1;
 
+import "google/protobuf/any.proto";
+
 option java_multiple_files = true;
 option java_package = "io.opentelemetry.proto.common.v1";
 option java_outer_classname = "CommonProto";
@@ -26,9 +28,10 @@ message AttributeKeyValue {
   // ValueType is the enumeration of possible types that value can have.
   enum ValueType {
     STRING  = 0;
-    INT   = 1;
+    INT     = 1;
     DOUBLE  = 2;
     BOOL    = 3;
+    ANY     = 4;
   };
 
   // key part of the key-value pair.
@@ -44,6 +47,7 @@ message AttributeKeyValue {
   int64 int_value = 4;
   double double_value = 5;
   bool bool_value = 6;
+  google.protobuf.Any any_value = 7;
 }
 
 // StringKeyValue is a pair of key/value strings. This is the simpler (and faster) version
