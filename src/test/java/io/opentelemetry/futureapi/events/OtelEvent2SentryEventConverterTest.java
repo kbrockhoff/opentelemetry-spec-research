@@ -24,33 +24,17 @@ import io.sentry.event.EventBuilder;
 import io.sentry.event.interfaces.ExceptionInterface;
 import io.sentry.event.interfaces.SentryException;
 import io.sentry.event.interfaces.SentryStackTraceElement;
-import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
-import java.util.logging.Logger;
 import org.junit.Test;
 
 /** Unit tests for {@link OtelEvent2SentryEventConverter}. */
-public class OtelEvent2SentryEventConverterTest {
-
-  private static final Logger LOGGER =
-      Logger.getLogger(OtelEvent2SentryEventConverterTest.class.getName());
+public class OtelEvent2SentryEventConverterTest extends AbstractConverterEquivalencyTesting {
 
   @Test
   public void shouldConvertToSentryWithTheSameDataAsIfSubmittedToSentryDirectly() {
-    ThrowableTranslator translator = new ThrowableTranslator(128);
     Exception throwable = generateMultiCauseException();
-    Map<String, Object> parameters = new HashMap<>();
-    parameters.put("personId", 58763);
-    parameters.put("firstName", "Kent");
-    parameters.put("lastName", "Beck");
-    parameters.put("averageRating", 4.87);
-    parameters.put("participant", true);
-    Event source = translator.translateThrowable(throwable, parameters);
-    LOGGER.info(source.toByteString().toStringUtf8());
+    Event source = translateThrowableToOtelEvent(throwable);
     OtelEvent2SentryEventConverter converter = new OtelEvent2SentryEventConverter();
     io.sentry.event.Event target = converter.convert(source);
     io.sentry.event.Event direct = new EventBuilder()
@@ -87,25 +71,4 @@ public class OtelEvent2SentryEventConverterTest {
     }
   }
 
-  private Exception generateMultiCauseException() {
-    try {
-      callThatThrowsNestedIllegalArgumentException();
-    } catch (Exception exception) {
-      return exception;
-    }
-    return null;
-  }
-
-  private void callThatThrowsNestedIllegalArgumentException() {
-    try {
-      callThatThrowsSQLException();
-    } catch (SQLException cause) {
-      throw new IllegalArgumentException("invalid input data", cause);
-    }
-  }
-
-  private void callThatThrowsSQLException() throws SQLException {
-    throw new SQLIntegrityConstraintViolationException(
-        "Column widget_id cannot be null", "23000", 1048);
-  }
 }

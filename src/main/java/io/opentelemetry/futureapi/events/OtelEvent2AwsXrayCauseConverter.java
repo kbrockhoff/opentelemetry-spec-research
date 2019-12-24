@@ -21,6 +21,8 @@ import static io.opentelemetry.futureapi.events.AttributeUtils.convertAttributeL
 import static io.opentelemetry.futureapi.events.EventConstants.ATTR_ERROR_OBJECT;
 import static io.opentelemetry.futureapi.events.EventConstants.EVENT_ERROR;
 
+import com.amazonaws.xray.entities.Cause;
+import com.amazonaws.xray.entities.ThrowableDescription;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.opentelemetry.proto.events.v1.ErrorData;
@@ -28,28 +30,20 @@ import io.opentelemetry.proto.events.v1.Event;
 import io.opentelemetry.proto.events.v1.ExceptionData;
 import io.opentelemetry.proto.events.v1.StackTrace;
 import io.opentelemetry.proto.events.v1.StackTrace.StackFrame;
-import io.sentry.event.Event.Level;
-import io.sentry.event.interfaces.ExceptionInterface;
-import io.sentry.event.interfaces.SentryException;
-import io.sentry.event.interfaces.SentryStackTraceElement;
-import io.sentry.event.interfaces.StackTraceInterface;
-import java.util.Date;
-import java.util.Deque;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.logging.Logger;
 import javax.annotation.Nullable;
 
 /**
- * Converts an OpenTelemetry event containing error info into a Sentry event.
+ * Converts an OpenTelemetry event containing error info into an AWS X-Ray Cause object.
  */
-public class OtelEvent2SentryEventConverter {
+public class OtelEvent2AwsXrayCauseConverter {
 
   private static final Logger LOGGER =
-      Logger.getLogger(OtelEvent2SentryEventConverter.class.getName());
+      Logger.getLogger(OtelEvent2AwsXrayCauseConverter.class.getName());
 
   @Nullable
-  public io.sentry.event.Event convert(Event source) {
+  public Cause convert(Event source) {
     checkNotNull(source, "source is required");
     if (!EVENT_ERROR.equals(source.getDescription())) {
       LOGGER.info("converter only supports events of type \"error\"");
@@ -58,7 +52,7 @@ public class OtelEvent2SentryEventConverter {
     return doConvert(source);
   }
 
-  private io.sentry.event.Event doConvert(Event source) {
+  private Cause doConvert(Event source) {
     Map<String, Object> attributeMap = convertAttributeListToMap(source.getAttributesList());
     Any any = (Any) attributeMap.get(ATTR_ERROR_OBJECT);
     if (any == null) {
@@ -74,44 +68,38 @@ public class OtelEvent2SentryEventConverter {
       return null;
     }
     String message = errorData.getExceptions(0).getMesssage();
-    Deque<SentryException> exceptions = new LinkedList<>();
+    Cause target = new Cause();
+    target.setId(errorData.getHashId());
+    target.setMessage(message);
     for (ExceptionData exception : errorData.getExceptionsList()) {
-      SentryException sentryException = convertException(exception);
-      exceptions.add(sentryException);
+      ThrowableDescription descriptor = convertException(exception);
+      target.addException(descriptor);
     }
-    return new io.sentry.event.EventBuilder()
-        .withSdkIntegration("otel")
-        .withTimestamp(new Date(source.getTimeUnixnano() / 1000000L))
-        .withMessage(message)
-        .withLevel(Level.ERROR)
-        .withSentryInterface(new ExceptionInterface(exceptions))
-        .build();
+    return target;
   }
 
-  private SentryException convertException(ExceptionData source) {
-    StackTraceInterface stackTraceInterface = convertStackTrace(source.getStack());
-    int pos = source.getType().lastIndexOf('.');
-    String exceptionClassName = source.getType().substring(pos + 1);
-    String exceptionPackageName = source.getType().substring(0, pos);
-    return new SentryException(source.getMesssage(), exceptionClassName, exceptionPackageName,
-        stackTraceInterface);
+  private ThrowableDescription convertException(ExceptionData source) {
+    ThrowableDescription target = new ThrowableDescription();
+    target.setId(source.getId());
+    target.setMessage(source.getMesssage());
+    target.setType(source.getType());
+    target.setCause(source.getCause());
+    target.setSkipped(source.getStack().getDroppedFramesCount());
+    target.setStack(convertStackTrace(source.getStack()));
+    return target;
   }
 
-  private StackTraceInterface convertStackTrace(StackTrace source) {
-    SentryStackTraceElement[] target =
-        new SentryStackTraceElement[source.getFramesList().size()];
+  private StackTraceElement[] convertStackTrace(StackTrace source) {
+    if (source == null || source.getFramesList().isEmpty()) {
+      return null;
+    }
+    StackTraceElement[] target = new StackTraceElement[source.getFramesList().size()];
     for (int i = 0; i < target.length; i++) {
-      StackFrame frame = source.getFrames(i);
-      target[i] = new SentryStackTraceElement(
-          frame.getLoadModule(),
-          frame.getFunctionName(),
-          frame.getFileName(),
-          (int) frame.getLineNumber(),
-          (int) frame.getColumnNumber(),
-          null,
-          null,
-          null);
+      StackFrame frame = source.getFramesList().get(i);
+      target[i] = new StackTraceElement(frame.getLoadModule(), frame.getFunctionName(),
+          frame.getFileName(), (int) frame.getLineNumber());
     }
-    return new StackTraceInterface(target);
+    return target;
   }
+
 }
