@@ -52,7 +52,7 @@ message ErrorData {
   string issue_hash_id = 2;
 
   // Chained exceptions which caused the error or fault.
-  repeated Exception exceptions = 3;
+  repeated ExceptionData exceptions = 3;
 
   // Method argument values in use when the error occurred.
   repeated opentelemetry.proto.common.v1.AttributeKeyValue arguments = 4;
@@ -65,7 +65,7 @@ message ErrorData {
 }
 
 // The full details of one exception
-message Exception {
+message ExceptionData {
   // Unique identifier for the exception.
   string id = 1;
 

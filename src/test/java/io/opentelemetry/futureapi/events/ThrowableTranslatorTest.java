@@ -16,7 +16,7 @@
 
 package io.opentelemetry.futureapi.events;
 
-import static io.opentelemetry.futureapi.events.ThrowableTranslator.EVENT_ERROR;
+import static io.opentelemetry.futureapi.events.EventConstants.EVENT_ERROR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 

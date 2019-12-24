@@ -19,13 +19,17 @@ package io.opentelemetry.futureapi.events;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Strings.padStart;
+import static io.opentelemetry.futureapi.events.EventConstants.ATTR_ERROR_MESSAGE;
+import static io.opentelemetry.futureapi.events.EventConstants.ATTR_ERROR_OBJECT;
+import static io.opentelemetry.futureapi.events.EventConstants.EVENT_ERROR;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.GeneratedMessageV3;
 import io.opentelemetry.proto.common.v1.AttributeKeyValue;
+import io.opentelemetry.proto.common.v1.AttributeKeyValue.ValueType;
 import io.opentelemetry.proto.events.v1.ErrorData;
-import io.opentelemetry.proto.events.v1.Exception;
+import io.opentelemetry.proto.events.v1.ExceptionData;
 import io.opentelemetry.proto.events.v1.StackTrace;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
@@ -46,11 +50,6 @@ import java.util.logging.Logger;
  */
 public class ThrowableTranslator {
 
-  public static final String EVENT_ERROR = "error";
-  public static final String ATTR_ERROR_KIND = "error.kind";
-  public static final String ATTR_ERROR_OBJECT = "error.object";
-  public static final String ATTR_ERROR_MESSAGE = "message";
-  public static final String ATTR_ERROR_STACK = "stack";
   private static final int DEFAULT_MAX_STACK_TRACE_LENGTH = 50;
   private static final Logger LOGGER = Logger.getLogger(ThrowableTranslator.class.getName());
 
@@ -91,7 +90,7 @@ public class ThrowableTranslator {
     MessageDigest hash = newMessageDigest();
     MessageDigest issue = newMessageDigest();
     String id = generateId();
-    Exception.Builder exception = constructException(throwable, id, hash, issue);
+    ExceptionData.Builder exception = constructException(throwable, id, hash, issue);
     Throwable nextNode = extractCause(throwable);
     while (null != nextNode) {
       final Throwable currentNode = nextNode;
@@ -113,11 +112,11 @@ public class ThrowableTranslator {
     return builder.build();
   }
 
-  private Exception.Builder constructException(
+  private ExceptionData.Builder constructException(
       Throwable throwable, String id, MessageDigest hash, MessageDigest issue) {
     calculateInstanceHash(throwable, hash);
     calculateIssueHash(throwable, issue);
-    Exception.Builder builder = Exception.newBuilder();
+    ExceptionData.Builder builder = ExceptionData.newBuilder();
     builder.setId(id);
     if (!isNullOrEmpty(throwable.getMessage())) {
       builder.setMesssage(throwable.getMessage());
@@ -148,7 +147,8 @@ public class ThrowableTranslator {
 
   private StackTrace.StackFrame constructStackFrame(StackTraceElement element) {
     return StackTrace.StackFrame.newBuilder()
-        .setFunctionName(element.getClassName() + "." + element.getMethodName())
+        .setLoadModule(element.getClassName())
+        .setFunctionName(element.getMethodName())
         .setFileName(isNullOrEmpty(element.getFileName()) ? "" : element.getFileName())
         .setLineNumber(element.getLineNumber())
         .build();
@@ -209,7 +209,8 @@ public class ThrowableTranslator {
   private static AttributeKeyValue buildAnyAttribute(String key, GeneratedMessageV3 value) {
     String typeUrl = "type.googleapis.com/" + value.getDescriptorForType().getFullName();
     Any any = Any.newBuilder().setTypeUrl(typeUrl).setValue(value.toByteString()).build();
-    return AttributeKeyValue.newBuilder().setKey(key).setAnyValue(any).build();
+    return AttributeKeyValue.newBuilder()
+        .setKey(key).setAnyValue(any).setType(ValueType.ANY).build();
   }
 
   private static Throwable extractCause(Throwable throwable) {
