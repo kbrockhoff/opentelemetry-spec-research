@@ -18,6 +18,7 @@ package io.opentelemetry.futureapi.events;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static io.opentelemetry.futureapi.events.AttributeUtils.convertAttributeListToMap;
+import static io.opentelemetry.futureapi.events.AttributeUtils.convertStackFrame2StackTraceElement;
 import static io.opentelemetry.futureapi.events.EventConstants.ATTR_ERROR_OBJECT;
 import static io.opentelemetry.futureapi.events.EventConstants.EVENT_ERROR;
 
@@ -83,8 +84,7 @@ public class OtelEvent2RollbarThrowableWrapperConverter {
     StackTraceElement[] target = new StackTraceElement[source.getFramesList().size()];
     for (int i = 0; i < target.length; i++) {
       StackFrame frame = source.getFramesList().get(i);
-      target[i] = new StackTraceElement(frame.getLoadModule(), frame.getFunctionName(),
-          frame.getFileName(), (int) frame.getLineNumber());
+      target[i] = convertStackFrame2StackTraceElement(frame);
     }
     return target;
   }

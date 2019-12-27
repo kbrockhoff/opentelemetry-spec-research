@@ -19,6 +19,7 @@ package io.opentelemetry.futureapi.events;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Strings.padStart;
+import static io.opentelemetry.futureapi.events.AttributeUtils.convertStackTraceElement2StackFrame;
 import static io.opentelemetry.futureapi.events.EventConstants.ATTR_ERROR_MESSAGE;
 import static io.opentelemetry.futureapi.events.EventConstants.ATTR_ERROR_OBJECT;
 import static io.opentelemetry.futureapi.events.EventConstants.EVENT_ERROR;
@@ -131,27 +132,18 @@ public class ThrowableTranslator {
     MessageDigest hash = newMessageDigest();
     if (elements.length > maxStackTraceLength) {
       for (int i = 0; i < maxStackTraceLength; i++) {
-        builder.addFrames(constructStackFrame(elements[i]));
+        builder.addFrames(convertStackTraceElement2StackFrame(elements[i]));
         hash.update(elements[i].toString().getBytes(UTF_8));
       }
       builder.setDroppedFramesCount(elements.length - maxStackTraceLength);
     } else {
       for (int i = 0; i < elements.length; i++) {
-        builder.addFrames(constructStackFrame(elements[i]));
+        builder.addFrames(convertStackTraceElement2StackFrame(elements[i]));
         hash.update(elements[i].toString().getBytes(UTF_8));
       }
     }
     builder.setStackTraceHashId(hashToString(hash));
     return builder.build();
-  }
-
-  private StackTrace.StackFrame constructStackFrame(StackTraceElement element) {
-    return StackTrace.StackFrame.newBuilder()
-        .setLoadModule(element.getClassName())
-        .setFunctionName(element.getMethodName())
-        .setFileName(isNullOrEmpty(element.getFileName()) ? "" : element.getFileName())
-        .setLineNumber(element.getLineNumber())
-        .build();
   }
 
   private static String generateId() {
@@ -217,7 +209,8 @@ public class ThrowableTranslator {
     if (throwable instanceof InvocationTargetException) {
       return ((InvocationTargetException) throwable).getTargetException();
     } else {
-      return throwable.getCause();
+      Throwable cause = throwable.getCause();
+      return cause == throwable ? null : cause;
     }
   }
 

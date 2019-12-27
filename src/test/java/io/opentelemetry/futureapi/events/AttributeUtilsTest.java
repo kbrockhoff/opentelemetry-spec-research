@@ -23,6 +23,7 @@ import io.opentelemetry.proto.common.v1.AttributeKeyValue;
 import io.opentelemetry.proto.common.v1.AttributeKeyValue.ValueType;
 import io.opentelemetry.proto.common.v1.AttributeKeyValueOrBuilder;
 import io.opentelemetry.proto.events.v1.Event;
+import io.opentelemetry.proto.events.v1.StackTrace.StackFrame;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,28 @@ public class AttributeUtilsTest {
     Map<String, Object> results = AttributeUtils.convertAttributeListToMap(attributes);
     assertEquals(5, results.size());
   }
+
+  @Test
+  public void shouldConvertStackTraceElementToStackFrameAndBackWithEquality() {
+    StackTraceElement original = new StackTraceElement(
+        "java.text.SimpleDateFormat",
+        "parse",
+        "SimpleDateFormat.java",
+        1234
+    );
+    StackFrame stackFrame = AttributeUtils.convertStackTraceElement2StackFrame(original);
+    StackTraceElement reconverted = AttributeUtils.convertStackFrame2StackTraceElement(stackFrame);
+    assertEquals(original, reconverted);
+  }
+
+  @Test
+  public void shouldConvertNullStackTraceElementToNullStackFrameAndBack() {
+    StackTraceElement original = null;
+    StackFrame stackFrame = AttributeUtils.convertStackTraceElement2StackFrame(original);
+    StackTraceElement reconverted = AttributeUtils.convertStackFrame2StackTraceElement(stackFrame);
+    assertNull(reconverted);
+  }
+
 
   private Any generateErrorInfoAny() {
     ThrowableTranslator translator = new ThrowableTranslator();
