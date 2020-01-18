@@ -1,0 +1,35 @@
+service:
+  name: "Logical name of the service."
+  namespace: "A namespace for 'service.name'."
+  instance:
+    id: "The string ID of the service instance."
+  version: "The version string of the service API or implementation."
+library:
+  name: "The name of the telemetry library."
+  language: "The source code language."
+  version: "The version string of the library."
+container:
+  name: "Container name."
+  image:
+    name: "Name of the image the container was built on."
+    tag: "Container image tag."
+k8s:
+  cluster:
+    name: "The name of the cluster that the pod is running in."
+  namespace:
+    name: "The name of the namespace that the pod is running in."
+  pod:
+    name: "The name of the pod."
+  deployment:
+    name: "The name of the deployment."
+host:
+  hostname: "Hostname of the host."
+  id: "Unique host id."
+  host: "Name of the host."
+  type: "Type of host."
+cloud:
+  provider: "Name of the cloud provider."
+  account:
+    id: "The cloud account id used to identify different entities."
+  region: "A specific geographical location where different entities can run."
+  zone: "Zones are a sub set of the region connected through low-latency links."
